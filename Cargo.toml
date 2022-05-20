@@ -1,0 +1,11 @@
+[package]
+categories = ["web-programming::http-server", "web-programming::websocket"]
+description = "chat with cows near you"
+edition = "2021"
+keywords = ["example", "actix-web", "websockets", "sqlite", "CRUD", "cows"]
+license = "MIT"
+name = "cowchat"
+publish = false
+version = "0.1.0"
+
+[dependencies]
