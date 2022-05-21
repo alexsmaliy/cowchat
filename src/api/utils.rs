@@ -13,7 +13,7 @@ lazy_static! {
         "Guenevere", "Guinness", "Henrietta", "Maggie", "Marshmallow", "Millie",
         "Minnie", "Muffin", "Nellie", "Oreo", "Peaches", "Penelope", "Penny",
         "Phoebe", "Popcorn", "Princess", "Rosie", "Ruby", "Smokey", "Snowflake",
-        "Snowflake", "Speckles", "Sprinles", "Sugar", "Sweetie",
+        "Speckles", "Sprinles", "Sugar", "Sweetie",
     ].iter().map(|name| name.to_string()).collect();
 }
 

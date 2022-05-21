@@ -31,7 +31,11 @@ pub(crate) mod utils {
 
 pub(crate) mod queries {
     // Constants need explicit type annotation.
+    pub(crate) const LIST_COWS_QUERY: &str = "SELECT * FROM cows;";
     pub(crate) const COUNT_COWS_QUERY: &str = "SELECT COUNT(*) FROM cows;";
     pub(crate) const DISTINCT_COW_NAMES_QUERY: &str = "SELECT DISTINCT cow_name FROM cows;";
     pub(crate) const MAX_COW_ID_QUERY: &str = "SELECT COALESCE(MAX(cow_id), 0) FROM cows;";
+    pub(crate) const INSERT_COW_QUERY: &str = "INSERT INTO
+        cows (cow_name, cow_id, cow_color, cow_age, cow_weight)
+        VALUES (:cow_name, :cow_id, :cow_color, :cow_age, :cow_weight);";
 }
