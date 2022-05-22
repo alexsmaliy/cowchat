@@ -4,7 +4,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 
 // My local imports, separated for clarity.
-use api::handlers::{count_cows_handler, beckon_cows_handler, list_cows_handler};
+use api::handlers::{count_cows_handler, beckon_cows_handler, list_cows_handler, websocket_cowchat_handler};
 use db::utils::init_db_schema;
 
 // Declarations of modules that are direct descendants of this one.
@@ -43,7 +43,8 @@ async fn main() -> std::io::Result<()> {
 
         let cows_scope = scope("/cows").route("/count", get().to(count_cows_handler))
                                        .route("/beckon", post().to(beckon_cows_handler))
-                                       .route("/list", get().to(list_cows_handler));
+                                       .route("/list", get().to(list_cows_handler))
+                                       .route("/chat/{cow_name}", get().to(websocket_cowchat_handler));
 
         App::new().app_data(shared_pool.clone()) // shared stuff
                   .wrap(logger) // logging middleware

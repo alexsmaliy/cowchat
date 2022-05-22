@@ -1,23 +1,21 @@
 use std::collections::HashSet;
 
-use actix_web::web::{Data, Json};
+use actix_web::{error, HttpRequest, HttpResponse};
+use actix_web::web::{Data, Json, Path, Payload};
+use actix_web_actors::ws;
 use anyhow::anyhow;
 use log;
-use r2d2::{Pool, PooledConnection};
-use r2d2_sqlite::SqliteConnectionManager;
-use r2d2_sqlite::rusqlite::named_params;
+use r2d2_sqlite::{rusqlite, rusqlite::named_params};
 use rand::prelude::*;
 
 // `crate` is the root of import paths for local modules.
 // Relative imports with `../` are also possible.
 use crate::api::types::{BeckonCowsRequest, CowListResponse, Cow, CowColor};
 use crate::api::utils::{COW_NAMES, make_cow};
-use crate::db::queries::{COUNT_COWS_QUERY, DISTINCT_COW_NAMES_QUERY, INSERT_COW_QUERY, LIST_COWS_QUERY, MAX_COW_ID_QUERY};
-use crate::errors::CowError;
-
-// Type alias for annoying types.
-type MyPool = Pool<SqliteConnectionManager>;
-type MyConn = PooledConnection<SqliteConnectionManager>;
+use crate::api::websockets::CowChat;
+use crate::db::queries::{CHECK_FOR_COW_QUERY, COUNT_COWS_QUERY, DISTINCT_COW_NAMES_QUERY, INSERT_COW_QUERY, LIST_COWS_QUERY, MAX_COW_ID_QUERY};
+use crate::db::types::{MyConn, MyPool};
+use crate::errors::CowError;    
 
 pub(crate) async fn count_cows_handler(db_pool: Data<MyPool>) -> Result<String, CowError> {
     let conn = db_pool.get().map_err(|e| CowError::from(anyhow!(e)))?;
@@ -62,6 +60,30 @@ pub(crate) async fn list_cows_handler(db_pool: Data<MyPool>) -> Result<CowListRe
             Ok(CowListResponse { cows })
         }
     }
+}
+
+pub(crate) async fn websocket_cowchat_handler(db_pool: Data<MyPool>, path: Path<String>, req: HttpRequest, stream: Payload) -> Result<HttpResponse, error::Error> {
+    let pool_ref = (*db_pool).clone();
+    let cow_name = capitalized(&path.into_inner());
+    let conn = db_pool.get().map_err(|e| error::ErrorInternalServerError(e))?;
+    if check_for_cow(&conn, &cow_name).map_err(|e| error::ErrorInternalServerError(e))? {
+        ws::start(CowChat::new(pool_ref, cow_name), &req, stream)
+    } else {
+        Err(error::ErrorBadRequest(anyhow!("No such cow currently present to chat with: {}", cow_name)))
+    }
+}
+
+fn capitalized(s: &str) -> String {
+    let mut cs = s.chars();
+    cs.next().unwrap().to_uppercase().to_string() + cs.as_str()
+}
+
+fn check_for_cow(conn: &MyConn, cow_name: &str) -> Result<bool, CowError> {
+    let stmt = conn.prepare_cached(CHECK_FOR_COW_QUERY);
+    let row: Result<u32, rusqlite::Error> = stmt.and_then(|mut stmt| {
+        stmt.query_row(&[(":cow_name", &cow_name)], |row| row.get(0))
+    });
+    row.map(|val| val == 1).map_err(|e| CowError::from(anyhow!(e)))
 }
 
 fn count_cows(conn: &MyConn) -> anyhow::Result<u32> {

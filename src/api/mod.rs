@@ -1,3 +1,4 @@
 pub(crate) mod handlers;
-pub(in self) mod types;
-pub(in self) mod utils;
+pub(crate) mod types;
+pub(crate) mod utils;
+pub(crate) mod websockets;

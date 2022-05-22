@@ -32,10 +32,25 @@ pub(crate) mod utils {
 pub(crate) mod queries {
     // Constants need explicit type annotation.
     pub(crate) const LIST_COWS_QUERY: &str = "SELECT * FROM cows;";
+    pub(crate) const CHECK_FOR_COW_QUERY: &str = "SELECT 0 <> (SELECT COUNT(*) FROM cows WHERE cow_name = :cow_name);";
     pub(crate) const COUNT_COWS_QUERY: &str = "SELECT COUNT(*) FROM cows;";
     pub(crate) const DISTINCT_COW_NAMES_QUERY: &str = "SELECT DISTINCT cow_name FROM cows;";
     pub(crate) const MAX_COW_ID_QUERY: &str = "SELECT COALESCE(MAX(cow_id), 0) FROM cows;";
     pub(crate) const INSERT_COW_QUERY: &str = "INSERT INTO
         cows (cow_name, cow_id, cow_color, cow_age, cow_weight)
         VALUES (:cow_name, :cow_id, :cow_color, :cow_age, :cow_weight);";
+    pub(crate) const INSERT_CHAT_SESSION: &str = "INSERT INTO
+        chat_sessions (cow_id, duration)
+        SELECT cow_id, :duration FROM
+            (SELECT cow_id FROM cows WHERE cow_name LIKE :cow_name COLLATE NOCASE);";
+}
+
+pub(crate) mod types {
+
+    use r2d2::{Pool, PooledConnection};
+    use r2d2_sqlite::SqliteConnectionManager;
+
+    // Type alias for annoying types.
+    pub(crate) type MyPool = Pool<SqliteConnectionManager>;
+    pub(crate) type MyConn = PooledConnection<SqliteConnectionManager>;
 }

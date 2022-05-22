@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use actix_web::{body::BoxBody, HttpRequest, HttpResponse, Responder};
-use r2d2_sqlite::{rusqlite, rusqlite::{ToSql, types::{FromSql, ToSqlOutput}}};
+use r2d2_sqlite::{rusqlite, rusqlite::{ToSql, types::{FromSql, FromSqlError, FromSqlResult, ToSqlOutput, ValueRef}}};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -18,10 +18,10 @@ pub(crate) struct CowListResponse {
 
 impl Display for CowListResponse {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let s = self.cows.iter().map(|c| format!("{}", c));
-        let v: Vec<String> = s.collect();
-        let p = v.join(", ");
-        write!(f, "BeckonCowsResponse {{ cows: [{}] }}", p)
+        let str_iter = self.cows.iter().map(|c| format!("{}", c));
+        let str_vec: Vec<String> = str_iter.collect();
+        let one_string = str_vec.join(", ");
+        write!(f, "BeckonCowsResponse {{ cows: [{}] }}", one_string)
     }
 }
 
@@ -46,7 +46,7 @@ pub(crate) struct Cow {
 
 impl Cow {
     pub fn new(name: impl AsRef<str>, id: u32, color: CowColor, age: u32, weight: u32) -> Self {
-        Cow { name: String::from(name.as_ref()), id, color, age, weight }
+        Self { name: String::from(name.as_ref()), id, color, age, weight }
     }
 }
 
@@ -76,7 +76,7 @@ impl AsRef<str> for CowColor {
 impl TryFrom<&str> for CowColor {
     type Error = ();
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        match s.as_ref() {
+        match s {
             "black" => Ok(CowColor::Black),
             "brown" => Ok(CowColor::Brown),
             "tan" => Ok(CowColor::Tan),
@@ -93,11 +93,11 @@ impl ToSql for CowColor {
 }
 
 impl FromSql for CowColor {
-    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         let s: String = FromSql::column_result(value)?;
         match CowColor::try_from(s.as_str()) {
             Ok(c) => Ok(c),
-            Err(_) => Err(rusqlite::types::FromSqlError::InvalidType),
+            Err(_) => Err(FromSqlError::InvalidType),
         }
     }
 }
