@@ -4,7 +4,7 @@ use actix_web::{error, HttpRequest, HttpResponse};
 use actix_web::web::{Data, Json, Path, Payload};
 use actix_web_actors::ws;
 use anyhow::anyhow;
-use log;
+
 use r2d2_sqlite::{rusqlite, rusqlite::named_params};
 use rand::prelude::*;
 
@@ -65,8 +65,8 @@ pub(crate) async fn list_cows_handler(db_pool: Data<MyPool>) -> Result<CowListRe
 pub(crate) async fn websocket_cowchat_handler(db_pool: Data<MyPool>, path: Path<String>, req: HttpRequest, stream: Payload) -> Result<HttpResponse, error::Error> {
     let pool_ref = (*db_pool).clone();
     let cow_name = capitalized(&path.into_inner());
-    let conn = db_pool.get().map_err(|e| error::ErrorInternalServerError(e))?;
-    if check_for_cow(&conn, &cow_name).map_err(|e| error::ErrorInternalServerError(e))? {
+    let conn = db_pool.get().map_err(error::ErrorInternalServerError)?;
+    if check_for_cow(&conn, &cow_name).map_err(error::ErrorInternalServerError)? {
         ws::start(CowChat::new(pool_ref, cow_name), &req, stream)
     } else {
         Err(error::ErrorBadRequest(anyhow!("No such cow currently present to chat with: {}", cow_name)))
@@ -89,7 +89,7 @@ fn check_for_cow(conn: &MyConn, cow_name: &str) -> Result<bool, CowError> {
 fn count_cows(conn: &MyConn) -> anyhow::Result<u32> {
     let mut stmt = conn.prepare_cached(COUNT_COWS_QUERY)?;
     let mut rows = stmt.query([])?; // this query takes no params
-    let row = rows.next()?.ok_or(anyhow!("COUNT returned no rows!"))?;
+    let row = rows.next()?.ok_or_else(|| anyhow!("COUNT returned no rows!"))?;
     let count: u32 = row.get(0)?; // type annotation is required for get() to infer its return type
     Ok(count)
 }
@@ -121,7 +121,7 @@ fn get_current_max_id(conn: &MyConn) -> anyhow::Result<u32> {
     let mut stmt = conn.prepare_cached(MAX_COW_ID_QUERY)?;
     let max_id: u32 = stmt.query([])?
                           .next()?
-                          .ok_or(anyhow!("MAX(cow_id) returned no rows!"))?
+                          .ok_or_else(|| anyhow!("MAX(cow_id) returned no rows!"))?
                           .get(0)?;
     Ok(max_id)
 }
@@ -129,15 +129,14 @@ fn get_current_max_id(conn: &MyConn) -> anyhow::Result<u32> {
 fn write_cows(conn: &MyConn, cows: &Vec<Cow>) -> anyhow::Result<()> {
     let mut stmt = conn.prepare_cached(INSERT_COW_QUERY)?;
     for cow in cows {
-        match cow {
-            Cow { id, name, color, age, weight} => stmt.execute(named_params! {
-                ":cow_name": name,
-                ":cow_id": id,
-                ":cow_color": color,
-                ":cow_age": age,
-                ":cow_weight": weight,
-            })?,
-        };
+        let Cow { id, name, color, age, weight} = cow;
+        stmt.execute(named_params! {
+            ":cow_name": name,
+            ":cow_id": id,
+            ":cow_color": color,
+            ":cow_age": age,
+            ":cow_weight": weight,
+        })?;
     }
     Ok(())
 }
@@ -146,14 +145,14 @@ fn beckon_cows(conn: &MyConn, req: Json<BeckonCowsRequest>) -> anyhow::Result<Ve
     let mut random = rand::thread_rng();
     let desired_number = req.count;
     let max_cows = COW_NAMES.len() as u32;
-    let current_cows = count_cows(&conn)?;
+    let current_cows = count_cows(conn)?;
     let adjusted_number = desired_number.min(max_cows - current_cows);
     if adjusted_number == 0 { anyhow::bail!("Insufficient cows in meadow! Let some go!") }
-    let used_names = list_current_cow_names(&conn)?;
+    let used_names = list_current_cow_names(conn)?;
     let chosen_available_names = COW_NAMES.difference(&used_names)
         .into_iter()
         .choose_multiple(&mut random, adjusted_number as usize);
-    let max_id = get_current_max_id(&conn)?;
+    let max_id = get_current_max_id(conn)?;
     let new_cows: Vec<Cow> = chosen_available_names.iter().enumerate().map(|(index, name)| {
         let next_id = max_id + index as u32 + 1;
         make_cow(name, next_id)

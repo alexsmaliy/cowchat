@@ -2,7 +2,7 @@ use std::{time::{Duration, Instant}, sync::Arc};
 
 use actix::prelude::*;
 use actix_web_actors::ws::{Message, ProtocolError, WebsocketContext};
-use log;
+
 use r2d2_sqlite::rusqlite::named_params;
 
 use crate::api::utils::make_cow_phrase;
