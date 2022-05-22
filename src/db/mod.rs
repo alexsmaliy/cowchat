@@ -1,5 +1,4 @@
-// One file can contain multiple modules.
-// Imports are local to each module.
+// One file can contain multiple modules. Imports are local to each module.
 // Both modules and their members are subject to visibility rules.
 // For a consumer to refer to the member of a module, both the module and the
 // relevant member must be visible.
@@ -25,7 +24,7 @@ pub(crate) mod utils {
                 FOREIGN KEY(cow_id) REFERENCES cows (cow_id)
             );
             COMMIT;
-        ").unwrap();
+        ").unwrap(); // TODO: better error handling?
     }
 }
 
@@ -50,7 +49,7 @@ pub(crate) mod types {
     use r2d2::{Pool, PooledConnection};
     use r2d2_sqlite::SqliteConnectionManager;
 
-    // Type alias for annoying types.
+    // Type aliases for long types.
     pub(crate) type MyPool = Pool<SqliteConnectionManager>;
     pub(crate) type MyConn = PooledConnection<SqliteConnectionManager>;
 }

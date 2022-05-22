@@ -19,6 +19,7 @@ pub(crate) struct CowError(anyhow::Error);
 // We just proxy to the underlying error's implementation.
 impl Display for CowError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        // CowError is a tuple type, so its fields are numbered, not named.
         write!(f, "{}", self.0)
     }
 }
