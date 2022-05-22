@@ -107,7 +107,7 @@ pub(crate) async fn websocket_cowchat_handler(db_pool: Data<MyPool>,
 fn capitalized(s: &str) -> String {
     let mut cs = s.chars();
     // First character capitalized + rest of string.
-    cs.next().unwrap().to_uppercase().to_string() + cs.as_str()
+    cs.next().unwrap().to_uppercase().chain(cs).collect()
 }
 
 fn check_for_cow(conn: &MyConn, cow_name: &str) -> Result<bool, CowError> {
