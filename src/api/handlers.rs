@@ -46,8 +46,10 @@ pub(crate) async fn count_cows_handler(db_pool: Data<MyPool>) -> Result<String, 
             log::error!("OMIGOD {}", e);
             Err(CowError::from(e))
         },
-        // The OK arm is a no-op type conversion. In full, it would be like this:
-        //    Result::<_, anyhow::Error>::Ok(value) => Result::<_, CowError>::Ok(value)
+        // This OK arm has two purposes: convert the u32 result into a String
+        // (because u32 for some reason is not considered a valid response type)
+        // and also to do a no-op implicit conversion between Result<_, anyhow::Error>
+        // and Result<_, CowError>.
         Ok(value) => {
             log::debug!("Told client there were {} cows.", value);
             Ok(format!("{}", value))
