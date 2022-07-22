@@ -54,7 +54,8 @@ impl CowChat {
         let duration = (self.heartbeat - self.started).as_secs();
         log::debug!("Recording chat session with {} that lasted for {} seconds...", self.cow, duration);
         // An if-let statement can also do destructuring.
-        if let Err(e) = stmt.execute(named_params! {":cow_name": &self.cow, ":duration": duration}) {
+        let params = named_params! {":cow_name": &self.cow, ":duration": duration};
+        if let Err(e) = stmt.execute(params) {
             log::error!("Failed to record chat session in DB: {}", e);
         }
     }
